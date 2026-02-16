@@ -5,21 +5,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
-import { Book, User, Plus, Search, Zap, ArrowRight, Check } from 'lucide-react';
+import { Book, User, Plus, Search, Zap, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSession } from 'next-auth/react';
+import axios from 'axios';
 
 export default function OnboardingPage() {
+    const { data: session, update: updateSession } = useSession();
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [focus, setFocus] = useState('Creative Flow');
-    const { colors, setTheme } = useTheme();
+    const [isSaving, setIsSaving] = useState(false);
+    const { colors } = useTheme();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get('callbackUrl') || '/';
 
-    const handleNext = () => {
-        if (step < 3) setStep(step + 1);
-        else router.push('/');
+    const handleNext = async () => {
+        if (step === 3) {
+            setIsSaving(true);
+            try {
+                // Save onboarding data to profile
+                await axios.patch('/api/user/profile', {
+                    name,
+                    currentFocus: focus,
+                    isOnboarded: true,
+                });
+                // Update session to reflect changes locally if needed
+                await updateSession();
+                router.push(callbackUrl);
+            } catch (error) {
+                console.error('Failed to save onboarding data', error);
+                setIsSaving(false);
+            }
+        } else {
+            setStep(step + 1);
+        }
     };
 
     return (
@@ -132,8 +155,16 @@ export default function OnboardingPage() {
                             </CardContent>
                         </Card>
 
-                        <Button onClick={handleNext} className="w-full h-12 text-lg bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                            Open My Diary
+                        <Button
+                            onClick={handleNext}
+                            disabled={isSaving}
+                            className="w-full h-12 text-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all active:scale-[0.98]"
+                        >
+                            {isSaving ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                "Open My Diary"
+                            )}
                         </Button>
                     </motion.div>
                 )}

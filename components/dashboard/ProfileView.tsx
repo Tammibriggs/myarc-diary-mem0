@@ -2,10 +2,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { User, Zap, Search, Plus, Book, ArrowUpRight, ChevronRight, X } from 'lucide-react';
+import { User, Zap, Search, Plus, Book, ArrowUpRight, ChevronRight, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { ThemeType } from '@/context/ThemeContext';
+import { useSession, signOut } from 'next-auth/react';
 
 interface ProfileViewProps {
     currentFocus: string;
@@ -20,6 +21,7 @@ export function ProfileView({
     currentTheme,
     setTheme,
 }: ProfileViewProps) {
+    const { data: session } = useSession();
     const [activeOverlay, setActiveOverlay] = useState<'email' | 'notifications' | null>(null);
 
     const focusLenses = [
@@ -30,6 +32,10 @@ export function ProfileView({
         { id: 'Creative Flow', icon: Search, color: 'text-orange-500' },
     ];
 
+    const userName = session?.user?.name || 'User';
+    const userEmail = session?.user?.email || '';
+    const userImage = session?.user?.image;
+
     return (
         <motion.div
             key="profile"
@@ -38,16 +44,20 @@ export function ProfileView({
             className="space-y-12 pb-20"
         >
             <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
-                <div className="w-32 h-32 rounded-[40px] bg-linear-to-br from-primary to-secondary p-1">
-                    <div className="w-full h-full bg-white rounded-[38px] flex items-center justify-center">
-                        <User className="w-16 h-16 text-primary/30" />
+                <div className="w-32 h-32 rounded-[40px] bg-linear-to-br from-primary to-secondary p-1 shadow-2xl shadow-primary/20">
+                    <div className="w-full h-full bg-white rounded-[38px] flex items-center justify-center overflow-hidden">
+                        {userImage ? (
+                            <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+                        ) : (
+                            <User className="w-16 h-16 text-primary/30" />
+                        )}
                     </div>
                 </div>
                 <div className="space-y-2">
-                    <h2 className="text-5xl font-black tracking-tighter">John Doe</h2>
+                    <h2 className="text-5xl font-black tracking-tighter">{userName}</h2>
                     <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                        <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold tracking-widest uppercase italic">Deep Thinker</span>
-                        <span className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-[10px] font-bold tracking-widest uppercase">Pro Member</span>
+                        <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold tracking-widest uppercase italic border border-primary/20">Deep Thinker</span>
+                        <span className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-[10px] font-bold tracking-widest uppercase border border-secondary/20">Pro Member</span>
                     </div>
                     <p className="text-muted-foreground text-lg italic mt-4 max-w-sm">&quot;On an arc towards professional and personal mastery.&quot;</p>
                 </div>
@@ -154,7 +164,7 @@ export function ProfileView({
                 <h3 className="text-xl font-bold px-2">Account Settings</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
-                        { label: "Email Address", value: "john.doe@example.com", type: 'email' },
+                        { label: "Email Address", value: userEmail, type: 'email' },
                         { label: "Notifications", value: "Manage preferences", type: 'notifications' },
                     ].map((item, i) => (
                         <button
@@ -173,7 +183,14 @@ export function ProfileView({
             </div>
 
             <div className="pt-8 flex justify-center">
-                <Button variant="ghost" className="text-red-500 hover:text-red-600 font-bold text-lg hover:bg-red-50 px-12 rounded-full h-16">Sign Out</Button>
+                <Button
+                    variant="ghost"
+                    onClick={() => signOut({ callbackUrl: '/auth' })}
+                    className="text-red-500 hover:text-red-600 font-bold text-lg hover:bg-red-50 px-12 rounded-full h-16 active:scale-95 transition-all"
+                >
+                    <LogOut className="w-5 h-5 mr-3" />
+                    Sign Out
+                </Button>
             </div>
 
             {/* Settings Overlay */}
@@ -214,9 +231,9 @@ export function ProfileView({
                                     <div className="space-y-4">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Current Email</label>
-                                            <Input defaultValue="john.doe@example.com" className="h-14 rounded-2xl" />
+                                            <Input defaultValue={userEmail} disabled className="h-14 rounded-2xl bg-black/5" />
                                         </div>
-                                        <Button className="w-full h-14 rounded-2xl text-lg font-bold">Update Email</Button>
+                                        <p className="text-xs text-muted-foreground text-center">Contact support to change your primary account email.</p>
                                     </div>
                                 </div>
                             ) : (

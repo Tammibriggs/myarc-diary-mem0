@@ -40,13 +40,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('myarc-theme', theme);
     };
 
+    // Safety check to ensure we always have a valid theme
+    const safeTheme = themes[currentTheme] ? currentTheme : 'electric';
+    const activeColors = themes[safeTheme];
+
     return (
-        <ThemeContext.Provider value={{ currentTheme, setTheme, colors: themes[currentTheme] }}>
+        <ThemeContext.Provider value={{ currentTheme: safeTheme, setTheme, colors: activeColors }}>
             <div
                 style={{
-                    '--primary': themes[currentTheme].primary,
-                    '--secondary': themes[currentTheme].secondary,
-                    '--logo-bg': themes[currentTheme].logoBg,
+                    '--primary': activeColors.primary,
+                    '--secondary': activeColors.secondary,
+                    '--logo-bg': activeColors.logoBg,
                 } as any}
             >
                 {children}

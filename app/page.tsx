@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/context/ThemeContext';
+import { useSession } from 'next-auth/react';
 
 // Component Imports
 import { HomeView } from '@/components/dashboard/HomeView';
@@ -22,9 +23,17 @@ import { ShortsView } from '@/components/dashboard/ShortsView';
 import { ProfileView } from '@/components/dashboard/ProfileView';
 
 export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const { currentTheme, setTheme, colors } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [activeView, setActiveViewState] = useState<'home' | 'entries' | 'shorts' | 'profile'>('home');
+  // @ts-ignore
+  const [currentFocus, setCurrentFocus] = useState(session?.user?.currentFocus || 'Creative Flow');
+  const [selectedTag, setSelectedTag] = useState('All');
+  const [expandedShort, setExpandedShort] = useState<'realizations' | 'goals' | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<any>(null);
 
   // New function to update state and URL
   const setActiveView = (view: 'home' | 'entries' | 'shorts' | 'profile') => {
@@ -34,19 +43,38 @@ export default function Dashboard() {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  // Sync state from URL on mount and when searchParams change
+  // Session Sync
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth');
+      return;
+    }
+
+    if (status === 'authenticated') {
+      // @ts-ignore
+      const hasTheme = !!session?.user?.themePreference;
+
+      if (hasTheme) {
+        // Sync theme from DB
+        // @ts-ignore
+        setTheme(session.user.themePreference);
+      }
+    }
+
     const view = searchParams.get('view') as any;
     if (view && ['home', 'entries', 'shorts', 'profile'].includes(view)) {
       setActiveViewState(view);
     }
-  }, [searchParams]);
+  }, [searchParams, status, session, router, setTheme]);
 
-  const { currentTheme, setTheme, colors } = useTheme();
-  const [currentFocus, setCurrentFocus] = useState('Creative Flow');
-  const [selectedTag, setSelectedTag] = useState('All');
-  const [expandedShort, setExpandedShort] = useState<'realizations' | 'goals' | null>(null);
-  const [entryToDelete, setEntryToDelete] = useState<any>(null);
+  // Update currentFocus state when session updates
+  useEffect(() => {
+    // @ts-ignore
+    if (session?.user?.currentFocus) {
+      // @ts-ignore
+      setCurrentFocus(session.user.currentFocus);
+    }
+  }, [session]);
 
   // Mock Data
   const recentEntries = [
