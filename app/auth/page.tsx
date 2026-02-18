@@ -130,7 +130,9 @@ export default function AuthPage() {
                         transition={{ delay: 0.1 }}
                         className="text-lg text-muted-foreground max-w-md"
                     >
-                        The AI-powered diary that helps you understand yourself better, remember what matters, and achieve your goals faster.
+                        Understand yourself deeply.<br />
+                        Remember what matters.<br />
+                        Move toward your goals faster.<br />
                     </motion.p>
                 </div>
 
