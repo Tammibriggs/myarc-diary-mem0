@@ -4,20 +4,14 @@ import { sanitizeForAI } from "./sanitize";
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-interface SimilarEntry {
-  title: string;
-  preview: string;
-  content?: string;
-}
-
 /**
  * Context-aware entry analysis.
- * Passes semantically similar past entries and existing habits to Gemini
+ * Passes Mem0 memories and existing habits to Gemini
  * so it can detect recurring intents (goals) and behavioral patterns (habits).
  */
 export async function analyzeEntryWithContext(
   content: string,
-  similarEntries: SimilarEntry[],
+  mem0Memories: string[],
   existingHabits: string[]
 ) {
   if (!genAI) {
@@ -27,8 +21,8 @@ export async function analyzeEntryWithContext(
 
   const sanitizedContent = sanitizeForAI(content);
 
-  const similarContext = similarEntries.length > 0
-    ? similarEntries.map((e, i) => `${i + 1}. "${sanitizeForAI(e.title)}" — ${sanitizeForAI(e.content || e.preview)}`).join('\n')
+  const similarContext = mem0Memories.length > 0
+    ? mem0Memories.map((m, i) => `${i + 1}. ${m}`).join('\n')
     : 'None found.';
 
   const habitsContext = existingHabits.length > 0
@@ -37,7 +31,7 @@ export async function analyzeEntryWithContext(
 
   const prompt = `You are the AI engine for MyArc, a reflection-first journaling app.
 
-CONTEXT — Semantically related past journal entries:
+CONTEXT — Relevant facts from user's long-term memory:
 ${similarContext}
 
 CONTEXT — User's currently tracked habits:
@@ -48,15 +42,15 @@ TASK: Analyze the new journal entry below and extract structured data.
 HABIT DETECTION (type: "habit"):
 - Identify recurring behavioral patterns based on the principles of the books: Atomic Habits / Tiny Habits.
 - Focus on: triggers, anchors, routines, and small compounding behaviors.
-- Look ACROSS the related past entries above and the new entry to spot patterns.
+- Look ACROSS the memories above and the new entry to spot patterns.
 - Only extract NEW habits not already in the tracked habits list above.
-- If no recurring pattern exists across multiple entries, do not add any habit items to the shorts array.
+- If no recurring pattern exists, do not add any habit items.
 - Habits should be phrased as observations, e.g. "You tend to drink coffee every morning"
 
 GOAL DETECTION (type: "goal"):
-- If the related past entries above show a REPEATED intent or desire (the user keeps returning to the same topic/wish), generate a Goal.
+- If the memories above show a REPEATED intent or desire (the user keeps returning to the same topic/wish), generate a Goal.
 - Each goal must include 2-4 milestone suggestions.
-- Only suggest goals for genuinely recurring themes across multiple entries — not one-off mentions.
+- Only suggest goals for genuinely recurring themes — not one-off mentions.
 - If no repeated intent is detected, do NOT create a goal.
 
 Also extract:

@@ -1,4 +1,5 @@
 import { MemoryClient } from "mem0ai";
+import { sanitizeForAI } from "./sanitize";
 
 const apiKey = process.env.MEM0_API_KEY;
 
@@ -14,7 +15,11 @@ export async function syncToMemory(userId: string, content: string) {
     }
 
     try {
-        await memory.add([{ role: "user", content: content }], { user_id: userId });
+        const sanitizedContent = sanitizeForAI(content);
+        await memory.add([{ role: "user", content: sanitizedContent }], {
+            user_id: userId,
+            custom_instructions: "Extract user preferences, goals, habits, completed milestones, and significant life events. Exclude casual greetings, fleeting thoughts, and generic formatting. Focus on recurring patterns and actionable data."
+        });
     } catch (error) {
         console.error("Mem0 Sync Error:", error);
     }
@@ -25,7 +30,11 @@ export async function searchMemory(userId: string, query: string) {
         return [];
     }
     try {
-        return await memory.search(query, { user_id: userId });
+        const sanitizedQuery = sanitizeForAI(query);
+        const result = await memory.search(sanitizedQuery, { user_id: userId });
+        // Return just the memory strings
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return result.map((item: any) => item.memory);
     } catch (error) {
         console.error("Mem0 Search Error:", error);
         return [];

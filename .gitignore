@@ -20,6 +20,7 @@
 # production
 /build
 /.agent*
+example-mem0-useage-python.md
 
 # misc
 .DS_Store

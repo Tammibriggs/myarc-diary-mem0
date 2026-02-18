@@ -214,10 +214,17 @@ export const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorPro
         },
         editorProps: {
             attributes: {
-                class: 'prose prose-lg max-w-none focus:outline-none h-full flex-1 font-serif leading-relaxed',
+                class: 'prose prose-lg max-w-none focus:outline-none h-full flex-1 font-serif leading-relaxed prose-p:my-2 prose-headings:mt-4 prose-headings:mb-2',
             },
         },
     });
+
+    // Sync external content changes back to the editor
+    useEffect(() => {
+        if (editor && content !== editor.getHTML()) {
+            editor.commands.setContent(content);
+        }
+    }, [content, editor]);
 
     return (
         <div className="w-full flex flex-col flex-1 md:max-h-[60vh]">

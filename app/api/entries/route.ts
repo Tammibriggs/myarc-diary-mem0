@@ -4,7 +4,7 @@ import Entry from "@/models/Entry";
 import User from "@/models/User";
 import Short from "@/models/Short";
 import { analyzeEntryWithContext, embedText, cosineSimilarity } from "@/lib/gemini";
-import { syncToMemory } from "@/lib/mem0";
+import { syncToMemory, searchMemory } from "@/lib/mem0";
 import dbConnect from "@/lib/mongodb";
 
 import { encrypt, decrypt } from "@/lib/encryption";
@@ -129,7 +129,7 @@ export async function GET(req: Request) {
         }
 
         // No search — standard paginated fetch
-        let query: any = { userId: user._id };
+        const query: any = { userId: user._id };
         if (tag) {
             query.tags = tag;
         }
@@ -196,7 +196,7 @@ export async function POST(req: Request) {
 
         // Trigger AI Pipeline
         try {
-            // 1. Generate embedding for semantic search
+            // 0. Generate embedding for Search (Hybrid Approach: Mem0 for Context, Embeddings for Search)
             const plainText = `${title}. ${stripHtml(content)}`;
             const embedding = await embedText(plainText);
             if (embedding) {
@@ -204,46 +204,23 @@ export async function POST(req: Request) {
                 await newEntry.save();
             }
 
-            // 2. Find semantically similar past entries for context
-            let similarEntries: { title: string; preview: string; content?: string }[] = [];
-            if (embedding) {
-                const pastEntries = await Entry.find({ userId: user._id, _id: { $ne: newEntry._id } })
-                    .select('+embedding title preview content isEncrypted')
-                    .sort({ date: -1 })
-                    .limit(50);
+            // 1. Sync to Mem0 (Fire and forget, or await if we want strict consistency)
+            // We await it here to ensure it's indexed before we try to search it next time, 
+            // though for *this* analysis we might want to search *before* adding? 
+            // Actually, we want context *from the past*, so searching first is better.
+            // But the user *just* wrote this.
 
-                const scored = pastEntries
-                    .filter((e: any) => e.embedding && e.embedding.length > 0)
-                    .map((e: any) => ({
-                        title: e.title,
-                        preview: e.preview || '',
-                        content: e.content,
-                        isEncrypted: e.isEncrypted,
-                        score: cosineSimilarity(embedding, e.embedding),
-                    }))
-                    .filter((s: any) => s.score > 0.65)
-                    .sort((a: any, b: any) => b.score - a.score)
-                    .slice(0, 10);
+            // Step A: Search for relevant past memories
+            const mem0Memories = await searchMemory(user._id.toString(), plainText);
 
-                similarEntries = scored.map((s: any) => {
-                    const rawContent = s.content || '';
-                    const decrypted = s.isEncrypted ? decrypt(rawContent) : rawContent;
-                    return {
-                        title: s.title,
-                        preview: s.preview,
-                        content: stripHtml(decrypted)
-                    };
-                });
-            }
-
-            // 3. Load existing habits to avoid duplicates
+            // Step B: Load existing habits
             const existingHabits = await Short.find({ userId: user._id, type: 'habit', status: 'active' })
                 .select('content')
                 .lean();
             const habitStrings = existingHabits.map((h: any) => h.content);
 
-            // 4. Analyze entry with full context
-            const analysis = await analyzeEntryWithContext(content, similarEntries, habitStrings);
+            // Step C: Analyze entry with Mem0 context
+            const analysis = await analyzeEntryWithContext(content, mem0Memories, habitStrings);
 
             if (analysis) {
                 // Update Entry with analysis results
@@ -252,7 +229,7 @@ export async function POST(req: Request) {
                 newEntry.aiAnalysis = analysis;
                 await newEntry.save();
 
-                // 5. Create Shorts from Analysis
+                // Step D: Create Shorts from Analysis
                 if (analysis.shorts && Array.isArray(analysis.shorts)) {
                     for (const short of analysis.shorts) {
                         if (short.type === 'habit' || short.type === 'goal') {
@@ -269,9 +246,10 @@ export async function POST(req: Request) {
                         }
                     }
                 }
-
-
             }
+
+            // Step E: Sync this new entry to Mem0 (Improve future context)
+            await syncToMemory(user._id.toString(), plainText);
 
         } catch (aiError) {
             console.error("AI Pipeline Error:", aiError);

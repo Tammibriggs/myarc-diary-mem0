@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Save, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, Save, X, Loader2, Sparkles, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { decrypt } from "@/lib/encryption";
 import axios from 'axios';
 
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
@@ -16,6 +17,7 @@ export default function NewEntryPage() {
     const [tagInput, setTagInput] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
+    const [aiPrompt, setAiPrompt] = useState<string | null>(null);
     const router = useRouter();
 
     const today = new Date();
@@ -24,6 +26,21 @@ export default function NewEntryPage() {
         day: 'numeric',
         year: 'numeric',
     });
+
+    // Fetch AI Prompt on mount
+    useEffect(() => {
+        const fetchPrompt = async () => {
+            try {
+                const { data } = await axios.get('/api/entries/prompt');
+                if (data.prompt) {
+                    setAiPrompt(data.prompt);
+                }
+            } catch (e) {
+                console.log("Failed to fetch prompt", e);
+            }
+        };
+        fetchPrompt();
+    }, []);
 
     const addTag = (value: string) => {
         const tag = value.trim();
@@ -126,6 +143,51 @@ export default function NewEntryPage() {
                             className="mb-4 px-4 py-3 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-600 font-medium"
                         >
                             {error}
+                        </motion.div>
+                    )}
+
+                    {/* AI Prompt */}
+                    {aiPrompt && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mb-6 relative group"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl" />
+                            <div className="relative bg-white/50 backdrop-blur-md border border-indigo-100 rounded-2xl p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                                <div className="flex gap-3">
+                                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
+                                        <Sparkles className="w-5 h-5" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-semibold text-indigo-900">Thought Starter</p>
+                                        <p className="text-sm text-indigo-700 leading-relaxed max-w-xl">
+                                            {aiPrompt}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setAiPrompt(null)}
+                                        className="text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                    >
+                                        Dismiss
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => {
+                                            setContent((prev) => prev ? `${prev}<p><strong>${aiPrompt}</strong></p><p></p>` : `<p><strong>${aiPrompt}</strong></p><p></p>`);
+                                            setAiPrompt(null);
+                                        }}
+                                        className="bg-indigo-600 text-white hover:bg-indigo-700 border-none shadow-md shadow-indigo-200"
+                                    >
+                                        <Plus className="w-4 h-4 mr-1.5" />
+                                        Use Idea
+                                    </Button>
+                                </div>
+                            </div>
                         </motion.div>
                     )}
 
