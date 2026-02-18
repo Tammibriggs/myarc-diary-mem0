@@ -2,8 +2,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Calendar, X, Book, Zap, ArrowUpRight, Clock, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 interface ActivitySummaryProps {
     selectedDayIndex: number | null;
@@ -34,7 +35,25 @@ export function ActivitySummary({
         return labels;
     })();
 
-    const weeklyActivity = [35, 55, 70, 40, 85, 60, 90];
+    const [momentumData, setMomentumData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchMomentum = async () => {
+            setIsLoading(true);
+            try {
+                const { data } = await axios.get('/api/user/momentum');
+                setMomentumData(data);
+            } catch (error) {
+                console.error("Failed to fetch momentum data", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMomentum();
+    }, []);
+
+    const currentWeekData = selectedDayIndex !== null ? momentumData[selectedDayIndex] : null;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
@@ -66,31 +85,42 @@ export function ActivitySummary({
                 </div>
 
                 <div className="flex items-end justify-between h-32 px-2 mb-8 gap-1">
-                    {weeklyActivity.map((h, i) => (
-                        <div
-                            key={i}
-                            onClick={() => setSelectedDayIndex(i)}
-                            className="flex flex-col items-center gap-3 group h-full justify-end cursor-pointer flex-1"
-                        >
-                            <div className="relative w-full max-w-[20px] bg-black/5 rounded-full h-full overflow-hidden">
-                                <motion.div
-                                    initial={{ height: 0 }}
-                                    animate={{ height: `${h}%` }}
-                                    transition={{ delay: i * 0.1, duration: 0.5 }}
-                                    className={cn(
-                                        "absolute bottom-0 w-full rounded-full transition-all",
-                                        selectedDayIndex === i ? "bg-primary shadow-[0_0_15px_rgba(139,92,246,0.5)]" : "bg-primary/20 group-hover:bg-primary/40"
-                                    )}
-                                />
+                    {isLoading ? (
+                        Array.from({ length: 7 }).map((_, i) => (
+                            <div key={i} className="flex flex-col items-center gap-3 h-full justify-end flex-1">
+                                <div className="w-full max-w-[20px] bg-black/5 rounded-full h-full relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-linear-to-t from-black/10 to-transparent animate-pulse" />
+                                </div>
+                                <div className="h-2 w-8 bg-black/5 rounded animate-pulse" />
                             </div>
-                            <span className={cn(
-                                "text-[9px] font-bold uppercase tracking-tighter transition-colors whitespace-nowrap",
-                                selectedDayIndex === i ? "text-primary" : "text-muted-foreground/50"
-                            )}>
-                                {`WK${i + 1}`}
-                            </span>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        momentumData.map((week, i) => (
+                            <div
+                                key={i}
+                                onClick={() => setSelectedDayIndex(i)}
+                                className="flex flex-col items-center gap-3 group h-full justify-end cursor-pointer flex-1"
+                            >
+                                <div className="relative w-full max-w-[20px] bg-black/5 rounded-full h-full overflow-hidden">
+                                    <motion.div
+                                        initial={{ height: 0 }}
+                                        animate={{ height: `${week.score}%` }}
+                                        transition={{ delay: i * 0.1, duration: 0.5 }}
+                                        className={cn(
+                                            "absolute bottom-0 w-full rounded-full transition-all",
+                                            selectedDayIndex === i ? "bg-primary shadow-[0_0_15px_rgba(139,92,246,0.5)]" : "bg-primary/20 group-hover:bg-primary/40"
+                                        )}
+                                    />
+                                </div>
+                                <span className={cn(
+                                    "text-[9px] font-bold uppercase tracking-tighter transition-colors whitespace-nowrap",
+                                    selectedDayIndex === i ? "text-primary" : "text-muted-foreground/50"
+                                )}>
+                                    {week.weekLabel}
+                                </span>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -104,9 +134,9 @@ export function ActivitySummary({
                         >
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 {[
-                                    { label: "Reflect", value: "85%", icon: Book, color: "text-primary", desc: "Weekly Consistency" },
-                                    { label: "Discover", value: "2", icon: Zap, color: "text-secondary", desc: "Insights This Week" },
-                                    { label: "Act", value: "100%", icon: ArrowUpRight, color: "text-purple-500", desc: "Weekly Goals Met" },
+                                    { label: "Reflect", value: currentWeekData?.reflect || "0%", icon: Book, color: "text-primary", desc: "Weekly Consistency" },
+                                    { label: "Discover", value: currentWeekData?.discover || "0", icon: Zap, color: "text-secondary", desc: "Insights This Week" },
+                                    { label: "Act", value: currentWeekData?.act || "0%", icon: ArrowUpRight, color: "text-purple-500", desc: "Weekly Goals Met" },
                                 ].map((item, i) => (
                                     <div key={i} className="space-y-3">
                                         <div className="flex items-center gap-2">

@@ -37,7 +37,7 @@ export function ProfileView({
                     axios.get('/api/entries'),
                     axios.get('/api/shorts')
                 ]);
-                const reflections = Array.isArray(entriesRes.data) ? entriesRes.data.length : 0;
+                const reflections = entriesRes.data.totalCount || 0;
                 const goalsAchieved = Array.isArray(shortsRes.data) ? shortsRes.data.filter((s: any) => s.type === 'goal' && s.status === 'completed').length : 0;
                 setStats({ reflections, goalsAchieved });
             } catch (error) {

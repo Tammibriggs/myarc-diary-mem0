@@ -757,7 +757,7 @@ export function ShortsView({ expandedShort, setExpandedShort }: ShortsViewProps)
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
                 onClick={() => setShowFabMenu(true)}
-                className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-colors active:scale-95"
+                className="fixed bottom-28 sm:bottom-12 right-6 z-40 w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-colors active:scale-95"
             >
                 <Plus className="w-6 h-6" />
             </motion.button>
@@ -771,7 +771,7 @@ export function ShortsView({ expandedShort, setExpandedShort }: ShortsViewProps)
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-sm"
                         onClick={() => setItemToDelete(null)}
                     >
                         <motion.div

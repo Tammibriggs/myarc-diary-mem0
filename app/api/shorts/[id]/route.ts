@@ -32,11 +32,24 @@ export async function PUT(
         if (content !== undefined) short.content = content;
         if (status !== undefined) short.status = status;
         if (milestones !== undefined) {
-            short.milestones = milestones.map((m: any) => ({
-                title: m.title,
-                isCompleted: m.isCompleted || false,
-                _id: m._id, // Preserve existing IDs
-            }));
+            short.milestones = milestones.map((m: any) => {
+                const existing = short.milestones.id(m._id);
+                const isNowCompleted = m.isCompleted || false;
+
+                let completedAt = existing?.completedAt;
+                if (isNowCompleted && !existing?.isCompleted) {
+                    completedAt = new Date(); // Just completed
+                } else if (!isNowCompleted) {
+                    completedAt = undefined; // Unchecked
+                }
+
+                return {
+                    title: m.title,
+                    isCompleted: isNowCompleted,
+                    completedAt: completedAt,
+                    _id: m._id, // Preserve existing IDs
+                };
+            });
         }
 
         await short.save();

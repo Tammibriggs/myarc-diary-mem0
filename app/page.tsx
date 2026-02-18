@@ -275,8 +275,8 @@ export default function Dashboard() {
       </main>
 
       {/* Floating Bottom Nav */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-        <div className="flex items-center bg-white/90 backdrop-blur-2xl border border-white/50 shadow-2xl rounded-full px-3 py-3 gap-1">
+      <div className="fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] sm:w-auto max-w-fit">
+        <div className="flex items-center bg-white/90 backdrop-blur-2xl border border-white/50 shadow-2xl rounded-[32px] sm:rounded-full px-2 py-2 sm:px-3 sm:py-3 gap-1 ring-1 ring-black/5">
           {[
             { id: 'home', icon: Home, label: 'Home' },
             { id: 'entries', icon: Book, label: 'Entries' },
@@ -287,14 +287,20 @@ export default function Dashboard() {
               key={item.id}
               onClick={() => setActiveView(item.id as any)}
               className={cn(
-                "flex flex-col items-center justify-center w-20 h-16 rounded-[28px] transition-all duration-500",
+                "flex flex-col items-center justify-center h-14 sm:h-16 rounded-[24px] sm:rounded-[28px] transition-all duration-500 relative overflow-hidden flex-1 sm:flex-none w-16 sm:w-20",
                 activeView === item.id
-                  ? "bg-[#171717] text-white shadow-xl scale-110"
+                  ? "bg-[#171717] text-white shadow-xl scale-105 sm:scale-110"
                   : "text-[#171717]/40 hover:bg-black/5 hover:text-[#171717]"
               )}
             >
-              <item.icon className={cn("w-6 h-6 mb-1 transition-transform", activeView === item.id && "scale-110")} />
-              <span className="text-[10px] font-extrabold uppercase tracking-tighter">{item.label}</span>
+              <item.icon className={cn("w-5 h-5 sm:w-6 sm:h-6 mb-1 transition-transform", activeView === item.id && "scale-110")} />
+              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-tighter">{item.label}</span>
+              {activeView === item.id && (
+                <motion.div
+                  layoutId="nav-bg"
+                  className="absolute inset-0 bg-[#171717] -z-10"
+                />
+              )}
             </button>
           ))}
         </div>

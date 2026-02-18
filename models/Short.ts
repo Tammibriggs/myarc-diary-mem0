@@ -3,6 +3,7 @@ import mongoose, { Schema, model, models } from 'mongoose';
 const MilestoneSchema = new Schema({
     title: { type: String, required: true },
     isCompleted: { type: Boolean, default: false },
+    completedAt: { type: Date },
 }, { _id: true });
 
 const ShortSchema = new Schema({
