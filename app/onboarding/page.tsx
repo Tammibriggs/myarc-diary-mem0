@@ -12,7 +12,9 @@ import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
 
-export default function OnboardingPage() {
+import { Suspense } from 'react';
+
+function OnboardingContent() {
     const { data: session, update: updateSession } = useSession();
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
@@ -105,6 +107,7 @@ export default function OnboardingPage() {
                                 { id: 'Mental Clarity', icon: Book, color: 'text-secondary', desc: 'Emotional EQ & stress management' },
                                 { id: 'Connections', icon: User, color: 'text-purple-500', desc: 'Healthy boundaries & communication' },
                                 { id: 'Fitness & Health', icon: Plus, color: 'text-red-500', desc: 'Discipline & physical energy' },
+                                { id: 'Creative Flow', icon: Search, color: 'text-orange-500', desc: 'Discipline & physical energy' },
                             ].map((item) => (
                                 <button
                                     key={item.id}
@@ -170,5 +173,13 @@ export default function OnboardingPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function OnboardingPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+            <OnboardingContent />
+        </Suspense>
     );
 }

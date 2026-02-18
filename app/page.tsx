@@ -22,7 +22,10 @@ import { EntriesView } from '@/components/dashboard/EntriesView';
 import { ShortsView } from '@/components/dashboard/ShortsView';
 import { ProfileView } from '@/components/dashboard/ProfileView';
 
-export default function Dashboard() {
+import { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
+
+function DashboardContent() {
   const { data: session, status, update } = useSession();
   const { currentTheme, setTheme, colors } = useTheme();
   const router = useRouter();
@@ -203,18 +206,22 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center space-x-3">
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveView('profile')}
-              className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full bg-linear-to-r from-primary/10 to-secondary/10 border border-primary/20 text-primary hover:from-primary/20 transition-all hidden md:block"
-            >
-              Upgrade
-            </button>
-            <button
-              onClick={() => setActiveView('profile')}
-              className="w-10 h-10 bg-linear-to-br from-primary to-secondary rounded-xl border border-black/5 flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 shadow-lg shadow-primary/20"
-            >
-              <User className="w-5 h-5" />
-            </button>
+            <div>
+              <button
+                onClick={() => setActiveView('profile')}
+                className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full bg-linear-to-r from-primary/10 to-secondary/10 border border-primary/20 text-primary hover:from-primary/20 transition-all hidden md:block"
+              >
+                Upgrade
+              </button>
+            </div>
+            <div>
+              <button
+                onClick={() => setActiveView('profile')}
+                className="w-10 h-10 bg-linear-to-br from-primary to-secondary rounded-xl border border-black/5 flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 shadow-lg shadow-primary/20"
+              >
+                <User className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -357,5 +364,13 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F3F4F6] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
