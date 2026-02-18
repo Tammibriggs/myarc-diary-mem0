@@ -4,7 +4,7 @@ import Entry from "@/models/Entry";
 import User from "@/models/User";
 import Short from "@/models/Short";
 import DailyArc from "@/models/DailyArc";
-import { analyzeEntry, embedText, cosineSimilarity } from "@/lib/gemini";
+import { analyzeEntryWithContext, embedText, cosineSimilarity } from "@/lib/gemini";
 import { syncToMemory } from "@/lib/mem0";
 import dbConnect from "@/lib/mongodb";
 
@@ -197,8 +197,54 @@ export async function POST(req: Request) {
 
         // Trigger AI Pipeline
         try {
-            // 1. Analyze Entry with Gemini
-            const analysis = await analyzeEntry(content);
+            // 1. Generate embedding for semantic search
+            const plainText = `${title}. ${stripHtml(content)}`;
+            const embedding = await embedText(plainText);
+            if (embedding) {
+                newEntry.embedding = embedding;
+                await newEntry.save();
+            }
+
+            // 2. Find semantically similar past entries for context
+            let similarEntries: { title: string; preview: string; content?: string }[] = [];
+            if (embedding) {
+                const pastEntries = await Entry.find({ userId: user._id, _id: { $ne: newEntry._id } })
+                    .select('+embedding title preview content isEncrypted')
+                    .sort({ date: -1 })
+                    .limit(50);
+
+                const scored = pastEntries
+                    .filter((e: any) => e.embedding && e.embedding.length > 0)
+                    .map((e: any) => ({
+                        title: e.title,
+                        preview: e.preview || '',
+                        content: e.content,
+                        isEncrypted: e.isEncrypted,
+                        score: cosineSimilarity(embedding, e.embedding),
+                    }))
+                    .filter((s: any) => s.score > 0.65)
+                    .sort((a: any, b: any) => b.score - a.score)
+                    .slice(0, 10);
+
+                similarEntries = scored.map((s: any) => {
+                    const rawContent = s.content || '';
+                    const decrypted = s.isEncrypted ? decrypt(rawContent) : rawContent;
+                    return {
+                        title: s.title,
+                        preview: s.preview,
+                        content: stripHtml(decrypted)
+                    };
+                });
+            }
+
+            // 3. Load existing habits to avoid duplicates
+            const existingHabits = await Short.find({ userId: user._id, type: 'habit', status: 'active' })
+                .select('content')
+                .lean();
+            const habitStrings = existingHabits.map((h: any) => h.content);
+
+            // 4. Analyze entry with full context
+            const analysis = await analyzeEntryWithContext(content, similarEntries, habitStrings);
 
             if (analysis) {
                 // Update Entry with analysis results
@@ -207,19 +253,25 @@ export async function POST(req: Request) {
                 newEntry.aiAnalysis = analysis;
                 await newEntry.save();
 
-                // 2. Create Shorts from Analysis
+                // 5. Create Shorts from Analysis
                 if (analysis.shorts && Array.isArray(analysis.shorts)) {
                     for (const short of analysis.shorts) {
-                        await Short.create({
-                            userId: user._id,
-                            type: short.type,
-                            content: short.content,
-                            sourceEntryId: newEntry._id,
-                        });
+                        if (short.type === 'habit' || short.type === 'goal') {
+                            await Short.create({
+                                userId: user._id,
+                                type: short.type,
+                                content: short.content,
+                                source: 'ai',
+                                sourceEntryId: newEntry._id,
+                                milestones: short.type === 'goal' && short.milestones
+                                    ? short.milestones.map((m: string) => ({ title: m, isCompleted: false }))
+                                    : [],
+                            });
+                        }
                     }
                 }
 
-                // 3. Update Daily Arc
+                // 6. Update Daily Arc
                 if (analysis.dailyArc) {
                     const startOfDay = new Date();
                     startOfDay.setHours(0, 0, 0, 0);
@@ -237,17 +289,6 @@ export async function POST(req: Request) {
                         { upsert: true, new: true }
                     );
                 }
-            }
-
-            // 4. Sync to Mem0 (Long-term memory)
-            // await syncToMemory(user._id.toString(), content);
-
-            // 5. Generate embedding for semantic search
-            const plainText = `${title}. ${stripHtml(content)}`;
-            const embedding = await embedText(plainText);
-            if (embedding) {
-                newEntry.embedding = embedding;
-                await newEntry.save();
             }
 
         } catch (aiError) {

@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { User, Zap, Search, Plus, Book, ArrowUpRight, ChevronRight, X, LogOut, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeType } from '@/context/ThemeContext';
 import { useSession, signOut } from 'next-auth/react';
 import axios from 'axios';
@@ -24,10 +24,28 @@ export function ProfileView({
 }: ProfileViewProps) {
     const { data: session, update } = useSession();
     const [activeOverlay, setActiveOverlay] = useState<'email' | 'notifications' | 'privacy' | null>(null);
+    const [stats, setStats] = useState({ reflections: 0, goalsAchieved: 0 });
     const [pin, setPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
     const [pinError, setPinError] = useState('');
     const [isPinSaved, setIsPinSaved] = useState(false);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const [entriesRes, shortsRes] = await Promise.all([
+                    axios.get('/api/entries'),
+                    axios.get('/api/shorts')
+                ]);
+                const reflections = Array.isArray(entriesRes.data) ? entriesRes.data.length : 0;
+                const goalsAchieved = Array.isArray(shortsRes.data) ? shortsRes.data.filter((s: any) => s.type === 'goal' && s.status === 'completed').length : 0;
+                setStats({ reflections, goalsAchieved });
+            } catch (error) {
+                console.error("Failed to fetch stats", error);
+            }
+        };
+        fetchStats();
+    }, []);
 
     const focusLenses = [
         { id: 'Career Growth', icon: Zap, color: 'text-primary' },
@@ -115,11 +133,10 @@ export function ProfileView({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
-                    { label: "Total Reflections", value: "124", color: "text-primary" },
-                    { label: "Realizations Pinned", value: "32", color: "text-secondary" },
-                    { label: "Goals Achieved", value: "8", color: "text-purple-500" },
+                    { label: "Total Reflections", value: stats.reflections.toString(), color: "text-primary" },
+                    { label: "Goals Achieved", value: stats.goalsAchieved.toString(), color: "text-purple-500" },
                 ].map((stat, i) => (
                     <div key={i} className="p-8 rounded-[32px] bg-white border border-white/50 shadow-xl shadow-black/5 hover:-translate-y-1 transition-transform">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">{stat.label}</p>

@@ -16,8 +16,10 @@ const UserSchema = new Schema({
             enableConcealedMode: { type: Boolean, default: false },
         },
     },
+    shortsCategories: { type: [String], default: [] },
 }, { timestamps: true });
 
 const User = models.User || model('User', UserSchema);
 
+// Export the User model
 export default User;

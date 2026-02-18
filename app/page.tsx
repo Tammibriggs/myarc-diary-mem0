@@ -32,7 +32,7 @@ export default function Dashboard() {
   // @ts-ignore
   const [currentFocus, setCurrentFocus] = useState(session?.user?.currentFocus || 'Creative Flow');
   const [selectedTag, setSelectedTag] = useState('All');
-  const [expandedShort, setExpandedShort] = useState<'realizations' | 'goals' | null>(null);
+  const [expandedShort, setExpandedShort] = useState<'habit' | 'goal' | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<any>(null);
   const [isConcealed, setIsConcealed] = useState(false);
 
